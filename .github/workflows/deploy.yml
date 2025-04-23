@@ -1,0 +1,40 @@
+name: Deploy Vapor App to Oracle
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v3
+
+    # - name: 🐳 Build Docker image
+    #   run: docker build -t vapor-server .
+
+    - name: 📦 Upload project to server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "."
+        target: "~/vapor-app"
+
+    - name: 🚀 Deploy on server via SSH
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd ~/vapor-app
+          docker build -t vapor-server .
+          docker stop vapor-server || true
+          docker rm vapor-server || true
+          docker run -d --name vapor-server -p 80:8080 vapor-server
+
